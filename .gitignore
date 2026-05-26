@@ -45,3 +45,7 @@ Thumbs.db
 .env.local
 *.key
 *.pem
+
+# FORAS referenced_works cache (regenerable via --reverse-edges-only)
+data/SQ1/foras_references_cache.jsonl
+data/SQ1/raw/
