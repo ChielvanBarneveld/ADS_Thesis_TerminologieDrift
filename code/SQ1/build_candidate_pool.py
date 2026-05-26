@@ -12,8 +12,11 @@ Pipeline:
      (FORWARD edges: candidate -> FORAS).
   5. Batch-fetch FORAS papers' own referenced_works from OpenAlex and
      compute n_cited_by_foras_{any,tiab,ft} per candidate
-     (REVERSE edges: FORAS -> candidate). These are the columns that drive
-     the LOW / MEDIAN / HIGH bucket stratification in select_sentinels.py.
+     (REVERSE edges: FORAS -> candidate). Diagnostic-only columns; the
+     active sentinel selection (`select_sentinels.py` v3.1) stratifies on
+     era × cohort, not on these counts. See decisions.md 2026-05-26 for the
+     FORAS+Synergy contamination finding that retired the pre-pivot
+     LOW/MEDIAN/HIGH bucket framing.
   6. Write data/SQ1/candidates_with_terms.csv.
 
 This is the single source of `data/SQ1/candidates_with_terms.csv`. Both the
@@ -350,7 +353,8 @@ def main():
         print(f"  Reverse-edges added: any>=1 {(df['n_cited_by_foras_any']>0).sum()}, "
               f"tiab>=1 {(df['n_cited_by_foras_tiab']>0).sum()}, "
               f"ft>=1 {(df['n_cited_by_foras_ft']>0).sum()}")
-        print(f"  Bucket counts: LOW={(df['n_cited_by_foras_tiab']==0).sum()} "
+
+        print(f"  Pre-pivot bucket counts (diagnostic): LOW={(df['n_cited_by_foras_tiab']==0).sum()} "
               f"MEDIAN={((df['n_cited_by_foras_tiab']>=1)&(df['n_cited_by_foras_tiab']<=2)).sum()} "
               f"HIGH={(df['n_cited_by_foras_tiab']>=3).sum()}")
         print(f"Output: {OUT_CSV}")
@@ -513,11 +517,12 @@ def main():
         print(f"  Candidates with >=1 edge to FORAS-TIAB-included : {(df['n_edges_to_foras_TIAB_included'] > 0).sum()}")
         if "n_cited_by_foras_tiab" in df.columns:
             print()
-            print("Reverse-edges (FORAS -> candidate; drives LOW/MED/HIGH buckets):")
+            print("Reverse-edges (FORAS -> candidate; diagnostic only, not stratification axis):")
             print(f"  Cited by >=1 FORAS-any            : {(df['n_cited_by_foras_any']  > 0).sum()}")
             print(f"  Cited by >=1 FORAS-TIAB-included  : {(df['n_cited_by_foras_tiab'] > 0).sum()}")
             print(f"  Cited by >=1 FORAS-FT-included    : {(df['n_cited_by_foras_ft']   > 0).sum()}")
-            print("  Bucket distribution (by n_cited_by_foras_tiab):")
+            print("  Pre-pivot bucket distribution (diagnostic; v3.1 stratification axis is era x cohort):")
+            print(f"    LOW    (=0)   : {(df['n_cited_by_foras_tiab']==0).sum()}")
             print(f"    LOW    (=0)   : {(df['n_cited_by_foras_tiab']==0).sum()}")
             print(f"    MEDIAN (1-2)  : {((df['n_cited_by_foras_tiab']>=1)&(df['n_cited_by_foras_tiab']<=2)).sum()}")
             print(f"    HIGH   (>=3)  : {(df['n_cited_by_foras_tiab']>=3).sum()}")
