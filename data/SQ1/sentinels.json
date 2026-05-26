@@ -1,0 +1,106 @@
+{
+  "selection_date": "2026-05-19",
+  "version": "v3",
+  "n_sentinels": 3,
+  "claim": "claim_2_discovery_time_delta",
+  "e3_mode": "title_only",
+  "year_cutoff": 2005,
+  "rules_doc": "02_sentinel_selection/methods.md (v3 addendum)",
+  "v3_change_rationale": "v2 (12 mei) had 6 sentinels waarvan 3 uit Solomon-cohort (Lebanon War CSR) en 2 uit Grinker-cohort (WWII Tunisia). Cluster-discovery in raw/period/full werd hierdoor gedreven door cohort-overlap, niet door drift-vocabulary. Bovendien had Solomon 1993 een table-of-contents als abstract. v3 dropt naar N=3 met enforced cohort-diversity: 1 per era x 1 per bucket x 1 per cohort.",
+  "diversity_constraints": [
+    "Geen twee sentinels van dezelfde eerste-auteur",
+    "Geen twee sentinels uit dezelfde populatie/cohort",
+    "Abstract >= 500 chars EN substantief (geen TOC/lijst)",
+    "Drie eras gedekt: pre-1945, 1945-1979, 1980+",
+    "Drie buckets gedekt: LOW, MEDIAN, HIGH"
+  ],
+  "sentinels": [
+    {
+      "sentinel_id": "solomon_1988",
+      "openalex_id": "W2057711239",
+      "doi": "https://doi.org/10.1097/00005053-198805000-00002",
+      "title": "Psychological Sequelae of War A 2-Year Follow-up Study of Israeli Combat Stress Reaction Casualties",
+      "year": 1988,
+      "first_author": "Zahava Solomon",
+      "co_authors": [
+        "Mario Mikulincer"
+      ],
+      "cohort": "Israeli IDF Lebanon War 1982 CSR casualties (n=285)",
+      "journal": "The Journal of Nervous and Mental Disease",
+      "bucket": "HIGH",
+      "era": "1980+",
+      "n_cited_by_foras_tiab": 3,
+      "n_cited_by_foras_ft": 0,
+      "n_cited_by_foras_any": 0,
+      "abstract_chars_in_oa": 619,
+      "abstract_contains_ptsd_token": true,
+      "note": "PTSD-token in abstract is consistent with E3 (title-only)."
+    },
+    {
+      "sentinel_id": "kardiner_1947",
+      "openalex_id": "W1794622667",
+      "doi": "https://doi.org/10.7326/0003-4819-27-6-1051_2",
+      "title": "War Stress and Neurotic Illness.",
+      "year": 1947,
+      "first_author": "Abram Kardiner (impliciet via book-title; OpenAlex authorships leeg)",
+      "co_authors": [
+        "Herbert Spiegel"
+      ],
+      "cohort": "US WWI veterans Bureau case files (n=50)",
+      "journal": "Annals of Internal Medicine",
+      "bucket": "MEDIAN",
+      "era": "1945-1979",
+      "n_cited_by_foras_tiab": 2,
+      "n_cited_by_foras_ft": 0,
+      "n_cited_by_foras_any": 0,
+      "abstract_chars_in_oa": 917,
+      "abstract_contains_ptsd_token": false,
+      "note": "Book-restatement van Kardiners 1941 'Traumatic Neuroses of War'."
+    },
+    {
+      "sentinel_id": "grinker_1944_tunisia",
+      "openalex_id": "W4250282992",
+      "doi": "https://doi.org/10.1001/jama.1944.02850420061026",
+      "title": "War Neuroses in North Africa: The Tunisian Campaign (January-May 1943)",
+      "year": 1944,
+      "first_author": "Roy R. Grinker",
+      "co_authors": [],
+      "cohort": "Allied WWII neuropsychiatric casualties, Tunisian campaign (n=120)",
+      "journal": "Journal of the American Medical Association",
+      "bucket": "LOW",
+      "era": "pre-1945",
+      "n_cited_by_foras_tiab": 0,
+      "n_cited_by_foras_ft": 0,
+      "n_cited_by_foras_any": 0,
+      "abstract_chars_in_oa": 927,
+      "abstract_contains_ptsd_token": false,
+      "note": "Classic WWII war-neurosis preliminary field report."
+    }
+  ],
+  "diversity_validation": {
+    "unique_first_authors": 3,
+    "unique_cohorts": 3,
+    "unique_journals": 3,
+    "unique_eras": 3,
+    "unique_buckets": 3,
+    "abstract_min_chars": 619,
+    "any_TOC_abstract": false
+  },
+  "dropped_from_v6": [
+    {
+      "sentinel_id": "solomon_1993",
+      "openalex_id": "W1897891557",
+      "reason": "Same cohort as solomon_1988 (Solomon-Lebanon); abstract = book TOC (non-substantive)"
+    },
+    {
+      "sentinel_id": "solomon_1987",
+      "openalex_id": "W2151134135",
+      "reason": "Same cohort as solomon_1988 (Solomon-Lebanon); redundant"
+    },
+    {
+      "sentinel_id": "traumatic_war_neuroses_1951",
+      "openalex_id": "W1971917793",
+      "reason": "Futterman+Pumpian-Mindlin different cohort from Grinker but era+bucket overlap with kardiner_1947"
+    }
+  ]
+}

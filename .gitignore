@@ -1,0 +1,47 @@
+# =============================================================
+# ADS Thesis - Terminology drift in PTSD literature
+# Reproducibility-rule: code + input data live in Git; outputs do not.
+# Running the scripts on a fresh clone should recreate every file
+# in outputs/ exactly as in the thesis.
+# =============================================================
+
+# ----- 1. Outputs (regen via scripts) ------------------------
+# Ignore everything inside outputs/SQ{1,2,3}/ EXCEPT .gitkeep.
+# outputs/README.md at the parent level is tracked normally.
+outputs/SQ1/*
+outputs/SQ2/*
+outputs/SQ3/*
+!outputs/SQ1/.gitkeep
+!outputs/SQ2/.gitkeep
+!outputs/SQ3/.gitkeep
+
+# ----- 2. Regenerable intermediate data ----------------------
+# Big parquet that build_regex_dataset.py recreates in ~30s
+data/SQ2/foras_regex_rewritten.parquet
+
+# ----- 3. Python noise ---------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ----- 4. Virtual envs ---------------------------------------
+.venv/
+venv/
+env/
+
+# ----- 5. OS / IDE noise -------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ----- 6. Local secrets / config -----------------------------
+.env
+.env.local
+*.key
+*.pem
