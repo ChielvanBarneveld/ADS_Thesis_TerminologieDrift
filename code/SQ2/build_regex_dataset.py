@@ -1,8 +1,9 @@
 """Build the SQ2 regex-rewritten FORAS dataset.
 
 For each FORAS paper, produce a parallel `rewritten_*` version where every
-PTSD-token in title + abstract is replaced by a historical term sampled from
-the candidate-pool distribution.
+PTSD-token in title + abstract is replaced by a SINGLE historical term sampled
+from the candidate-pool distribution (one term per paper -> internally
+consistent era, not a mix of terms within one abstract).
 
 Reads:
   Report/data/foras/PTSS_Data_Foras_2025-02-05.xlsx
@@ -16,7 +17,7 @@ The output parquet has columns:
     title, abstract, included,
     original_title, original_abstract,
     rewritten_title, rewritten_abstract,
-    is_rewriteable        (True iff abstract contained ≥1 PTSD-token)
+    is_rewriteable        (True iff abstract/title contained >=1 PTSD-token)
 
 The grid simulation script (`run_simulations_grid.py`) then mixes original and
 rewritten versions per (pp, nn) cell.
@@ -82,25 +83,27 @@ def load_term_distribution() -> dict[str, float]:
     return dist
 
 
-def rewrite_text(text: str, dist: dict[str, float], rng: np.random.Generator) -> tuple[str, int]:
-    """Replace each PTSD-token with a historical term drawn from `dist`.
-
-    Each occurrence gets an independent draw. Returns (rewritten_text, n_replaced).
-    Empty/NaN input returns ("", 0).
-    """
-    if not isinstance(text, str) or not text:
-        return "", 0
+def draw_term(dist: dict[str, float], rng: np.random.Generator) -> str:
+    """Draw ONE historical term from the candidate-pool distribution."""
     terms = list(dist.keys())
     weights = np.array(list(dist.values()), dtype=float)
     weights = weights / weights.sum()
-    n_replaced = 0
+    return str(rng.choice(terms, p=weights))
 
-    def _repl(_m: re.Match) -> str:
-        nonlocal n_replaced
-        n_replaced += 1
-        return rng.choice(terms, p=weights)
 
-    rewritten = PTSD_TOKEN_RE.sub(_repl, text)
+def rewrite_text(text: str, term: str) -> tuple[str, int]:
+    """Replace every PTSD-token in `text` with the SAME `term`.
+
+    One term per paper (see main): all occurrences in a paper's title and
+    abstract are replaced by a single sampled historical term, so each rewritten
+    paper is internally consistent in era/terminology (not a mix of e.g.
+    "shell shock" and "battle fatigue" within one abstract).
+    Returns (rewritten_text, n_replaced). Empty/NaN input returns ("", 0).
+    """
+    if not isinstance(text, str) or not text:
+        return "", 0
+    n_replaced = len(PTSD_TOKEN_RE.findall(text))
+    rewritten = PTSD_TOKEN_RE.sub(lambda _m: term, text)
     return rewritten, n_replaced
 
 
@@ -119,8 +122,11 @@ def main() -> None:
     rewritten_abstracts: list[str] = []
     rewriteable: list[bool] = []
     for _, row in df.iterrows():
-        t_new, n_t = rewrite_text(row["title"], dist, rng)
-        a_new, n_a = rewrite_text(row["abstract"], dist, rng)
+        # ONE term per paper: title + abstract share the same historical term,
+        # so a rewritten paper is consistent in era (not a mix of terms).
+        term = draw_term(dist, rng)
+        t_new, n_t = rewrite_text(row["title"], term)
+        a_new, n_a = rewrite_text(row["abstract"], term)
         rewritten_titles.append(t_new)
         rewritten_abstracts.append(a_new)
         rewriteable.append((n_t + n_a) > 0)
