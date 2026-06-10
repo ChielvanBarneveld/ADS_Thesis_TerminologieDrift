@@ -44,11 +44,21 @@ COND_LABELS = {
     "period": "Period (era rewrite)",
     "full": "Full (modern rewrite)",
 }
+# Colourblind-safe palette (Okabe-Ito / Tol), chosen so no two conditions
+# are similar in hue (feedback R1: previous red/orange pair was too close).
 COND_COLORS = {
-    "baseline": "#4C72B0",
-    "raw": "#C44E52",
-    "period": "#DD8452",
-    "full": "#55A868",
+    "baseline": "#0072B2",  # blue
+    "raw": "#AA3377",       # purple-magenta
+    "period": "#E69F00",    # orange
+    "full": "#009E73",      # green
+}
+# Distinct linestyles so overlapping curves stay tellable apart even in
+# greyscale print (feedback R1: curves are similar in shape).
+COND_LINESTYLES = {
+    "baseline": "solid",
+    "raw": (0, (1, 1.2)),          # dotted
+    "period": (0, (3, 1.5, 1, 1.5)),  # dash-dot
+    "full": (0, (5, 1.5)),         # long dash
 }
 
 # Common x-axis: 1000 evenly spaced points from 0 to 1
@@ -137,7 +147,8 @@ def plot_recall_comparison(
         color = COND_COLORS[cond]
         label = COND_LABELS[cond]
 
-        ax.plot(X_INTERP, mean, color=color, linewidth=1.5, label=label, zorder=3)
+        ax.plot(X_INTERP, mean, color=color, linewidth=1.6,
+                linestyle=COND_LINESTYLES[cond], label=label, zorder=3)
         ax.fill_between(
             X_INTERP, mean - ci95, mean + ci95,
             color=color, alpha=0.15, zorder=2,
@@ -177,25 +188,4 @@ def main():
     print("Loading recall curves...")
     curves = load_recall_curves()
 
-    # Full view (0-100%)
-    plot_recall_comparison(
-        curves,
-        xlim=(0, 1),
-        ylim=(0, 1.02),
-        title="SQ1: Mean Recall Curves by Rewrite Condition (n=10 seeds)",
-        out_path=FIG_DIR / "recall_curves_full.png",
-    )
-
-    # Zoomed view (0-15%)
-    plot_recall_comparison(
-        curves,
-        xlim=(0, 0.15),
-        ylim=(0, 1.02),
-        title="SQ1: Mean Recall Curves (Zoomed to First 15%)",
-        out_path=FIG_DIR / "recall_curves_zoomed.png",
-        zoom_label="Zoomed: first 15% of review",
-    )
-
-
-if __name__ == "__main__":
-    main()
+    #

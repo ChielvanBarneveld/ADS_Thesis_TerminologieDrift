@@ -1,10 +1,12 @@
-"""SQ2: render WSS@95 and Loss heatmaps from the grid sweep.
+"""SQ2: render the combined WSS@95 + Loss heatmap figure from the grid sweep.
+
+Feedback R3 (Timo): the two heatmaps are now a single two-panel figure,
+WSS@95 in the left panel and normalized Loss in the right panel.
 
 Reads:  Report/outputs/SQ2/grid_runs/trials.jsonl
-Writes: Report/outputs/SQ2/figures/heatmap_wss95.png
-        Report/outputs/SQ2/figures/heatmap_loss.png
+Writes: Report/outputs/SQ2/figures/heatmap_grid.png
 
-Both heatmaps share the same 6x6 axes:
+Both panels share the same 6x6 axes:
     x = nn (% of negatives rewritten)  — "Drift prevalence among negatives"
     y = pp (% of positives rewritten)  — "Drift prevalence among positives"
 
@@ -31,17 +33,16 @@ FIG_DIR = REPORT_DIR / "outputs" / "SQ2" / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def render_heatmap(
+def render_panel(
+    ax,
     pivot_mean: pd.DataFrame,
     pivot_std: pd.DataFrame,
     baseline: float,
-    title: str,
-    subtitle: str,
+    panel_title: str,
     cbar_label: str,
-    out_path: Path,
     invert: bool = False,
 ):
-    """Render a single diverging heatmap centred on *baseline*.
+    """Render one diverging heatmap panel centred on *baseline*.
 
     Parameters
     ----------
@@ -60,15 +61,14 @@ def render_heatmap(
         vmin=baseline - vmax_dev, vcenter=baseline, vmax=baseline + vmax_dev,
     )
 
-    fig, ax = plt.subplots(figsize=(9, 7))
     im = ax.imshow(arr_mean, cmap=cmap, norm=norm, aspect="auto", origin="lower")
 
     ax.set_xticks(range(len(neg_levels)))
-    ax.set_xticklabels([f"{int(v)}%" for v in neg_levels], fontsize=10)
+    ax.set_xticklabels([f"{int(v)}%" for v in neg_levels], fontsize=9)
     ax.set_yticks(range(len(pos_levels)))
-    ax.set_yticklabels([f"{int(v)}%" for v in pos_levels], fontsize=10)
-    ax.set_xlabel("Drift prevalence among negatives", fontsize=12)
-    ax.set_ylabel("Drift prevalence among positives", fontsize=12)
+    ax.set_yticklabels([f"{int(v)}%" for v in pos_levels], fontsize=9)
+    ax.set_xlabel("Drift prevalence among negatives", fontsize=11)
+    ax.set_ylabel("Drift prevalence among positives", fontsize=11)
 
     # Cell annotations: bold mean + small italic std
     for i in range(arr_mean.shape[0]):
@@ -80,24 +80,18 @@ def render_heatmap(
             ax.text(
                 j, i + 0.05, f"{m:.3f}",
                 ha="center", va="center",
-                fontsize=10, fontweight="bold", color=txt_color,
+                fontsize=8.5, fontweight="bold", color=txt_color,
             )
             ax.text(
-                j, i - 0.22, f"±{s:.3f}",
+                j, i - 0.24, f"±{s:.3f}",
                 ha="center", va="center",
-                fontsize=7, fontstyle="italic", color=txt_color, alpha=0.7,
+                fontsize=6.5, fontstyle="italic", color=txt_color, alpha=0.7,
             )
 
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=0.98)
-    ax.set_title(subtitle, fontsize=9, color="grey", pad=12)
+    ax.set_title(panel_title, fontsize=11, pad=10)
 
     cb = plt.colorbar(im, ax=ax, shrink=0.85)
-    cb.set_label(cbar_label, fontsize=11)
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    fig.savefig(out_path, dpi=180, bbox_inches="tight")
-    plt.close(fig)
-    print(f"wrote {out_path.relative_to(REPORT_DIR)}")
+    cb.set_label(cbar_label, fontsize=10)
 
 
 def main():
@@ -134,30 +128,38 @@ def main():
         index=pos_levels, columns=neg_levels,
     )
 
-    render_heatmap(
-        wss_mean_piv, wss_std_piv, base_wss,
-        title=f"Mean WSS@95 across {n_trials} trials per cell  (N = {n_total} simulations total)",
-        subtitle=(
-            f"baseline FORAS ≈ {base_wss:.3f} (grey)  ·  "
-            "blue = degraded  ·  red = shortcut-leak\n"
-            "small italic = std-dev across trials"
+    fig, (ax_wss, ax_loss) = plt.subplots(1, 2, figsize=(16, 6.5))
+
+    render_panel(
+        ax_wss, wss_mean_piv, wss_std_piv, base_wss,
+        panel_title=(
+            f"WSS@95  ·  baseline ≈ {base_wss:.3f} (grey)\n"
+            "blue = degraded  ·  red = shortcut-leak"
         ),
         cbar_label="Mean WSS@95",
-        out_path=FIG_DIR / "heatmap_wss95.png",
     )
 
-    render_heatmap(
-        loss_mean_piv, loss_std_piv, base_loss,
-        title=f"Mean Loss across {n_trials} trials per cell  (N = {n_total} simulations total)",
-        subtitle=(
-            f"baseline FORAS ≈ {base_loss:.3f} (grey)  ·  "
-            "blue = improved  ·  red = degraded\n"
-            "small italic = std-dev across trials"
+    render_panel(
+        ax_loss, loss_mean_piv, loss_std_piv, base_loss,
+        panel_title=(
+            f"Normalized loss  ·  baseline ≈ {base_loss:.3f} (grey)\n"
+            "blue = improved  ·  red = degraded"
         ),
         cbar_label="Mean Loss",
-        out_path=FIG_DIR / "heatmap_loss.png",
         invert=True,
     )
+
+    fig.suptitle(
+        f"Mean WSS@95 (left) and normalized loss (right) across {n_trials} trials per cell"
+        f"  (N = {n_total} simulations total)  ·  small italic = std-dev across trials",
+        fontsize=12.5, fontweight="bold", y=0.99,
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    out_path = FIG_DIR / "heatmap_grid.png"
+    fig.savefig(out_path, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path.relative_to(REPORT_DIR)}")
 
 
 if __name__ == "__main__":

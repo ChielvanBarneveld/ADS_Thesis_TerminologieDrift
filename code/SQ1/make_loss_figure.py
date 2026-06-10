@@ -27,7 +27,8 @@ LABELS = {
     "period": "Period\n(era rewrite)",
     "full": "Full\n(modern rewrite)",
 }
-COLORS = {"baseline": "#4C72B0", "raw": "#C44E52", "period": "#DD8452", "full": "#55A868"}
+# Colourblind-safe palette (Okabe-Ito / Tol) — matches make_recall_plot.py (feedback R1).
+COLORS = {"baseline": "#0072B2", "raw": "#AA3377", "period": "#E69F00", "full": "#009E73"}
 
 
 def main() -> None:
@@ -49,9 +50,4 @@ def main() -> None:
     ax.spines[["top", "right"]].set_visible(False)
     plt.tight_layout()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(OUT, dpi=150)
-    print(f"wrote {OUT}")
-
-
-if __name__ == "__main__":
-    main()
+    
