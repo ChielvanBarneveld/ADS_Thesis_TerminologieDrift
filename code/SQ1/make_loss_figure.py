@@ -50,4 +50,9 @@ def main() -> None:
     ax.spines[["top", "right"]].set_visible(False)
     plt.tight_layout()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    
+    plt.savefig(OUT, dpi=150)
+    print(f"wrote {OUT}")
+
+
+if __name__ == "__main__":
+    main()

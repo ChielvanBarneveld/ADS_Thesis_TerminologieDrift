@@ -1,0 +1,38 @@
+{
+  "condition": "raw",
+  "seed": 47,
+  "engine": "asreview_3.0_elas_h3_svm_mxbai_balanced_max_nq1_cached",
+  "n_docs": 10597,
+  "n_positives": 134,
+  "n_sentinels": 3,
+  "prior_pos": 1726,
+  "prior_neg": 7835,
+  "wss_80": 0.7621,
+  "wss_90": 0.7971,
+  "wss_95": 0.764,
+  "steps_to_80": 402,
+  "steps_to_95": 1971,
+  "loss": 0.03077511230048743,
+  "atd": 389.5,
+  "sentinel_positions": [
+    {
+      "sentinel_id": "solomon_1988",
+      "step": 2704,
+      "percent_screened": 25.516655657261488,
+      "recall_at_step": 0.9776119402985075
+    },
+    {
+      "sentinel_id": "war_neuroses_tunisian_1944",
+      "step": 5181,
+      "percent_screened": 48.89119562140228,
+      "recall_at_step": 0.9925373134328358
+    },
+    {
+      "sentinel_id": "kardiner_1947",
+      "step": 5182,
+      "percent_screened": 48.900632254411626,
+      "recall_at_step": 1.0
+    }
+  ],
+  "elapsed_seconds": 1799.2
+}

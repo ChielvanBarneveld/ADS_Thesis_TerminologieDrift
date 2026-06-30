@@ -1,19 +1,28 @@
 # =============================================================
 # ADS Thesis - Terminology drift in PTSD literature
-# Reproducibility-rule: code + input data live in Git; outputs do not.
-# Running the scripts on a fresh clone should recreate every file
-# in outputs/ exactly as in the thesis.
+# Reproducibility-rule: code + input data live in Git; light outputs do not.
+# Running the scripts on a fresh clone should recreate every light output in
+# outputs/ exactly as in the thesis. Heavy (GPU) outputs are committed.
 # =============================================================
 
-# ----- 1. Outputs (regen via scripts) ------------------------
-# Ignore everything inside outputs/SQ{1,2,3}/ EXCEPT .gitkeep.
-# outputs/README.md at the parent level is tracked normally.
-outputs/SQ1/*
-outputs/SQ2/*
-outputs/SQ3/*
-!outputs/SQ1/.gitkeep
-!outputs/SQ2/.gitkeep
-!outputs/SQ3/.gitkeep
+# ----- 1. Light-model outputs (ELAS u4 / TF-IDF) -------------
+# Commit the FIGURES and aggregate SUMMARIES (the thesis figures + headline
+# numbers) as evidence. The bulky, fully regenerable intermediates (per-run and
+# per-cell results, the simulation-input CSVs) are ignored and rebuilt on CPU by
+# code/SQ{1,2}/.
+outputs/SQ1/simulations/runs/
+outputs/SQ1/simulations/datasets/
+outputs/SQ1/test.txt
+outputs/SQ2/simulations/
+outputs/SQ2/archive_per_occurrence_2026-06-02/
+
+# ----- 1b. Heavy-model outputs (ELAS h3, committed) ----------
+# Heavy results ARE committed as evidence: they need a GPU (Kaggle, see
+# code/SQ{1,2}_heavy/KAGGLE_README.md) and cannot be regenerated on a fresh
+# CPU clone. Only the large GPU embedding caches (~260 MB) are ignored - they
+# are rebuilt on a GPU and are not needed for the downstream comparison.
+outputs/SQ1_heavy/simulations/emb_cache/
+outputs/SQ2_heavy/emb_cache/
 
 # ----- 2. Regenerable intermediate data ----------------------
 # Big parquet that build_regex_dataset.py recreates in ~30s
@@ -49,6 +58,9 @@ Thumbs.db
 # FORAS referenced_works cache (regenerable via --reverse-edges-only)
 data/SQ1/foras_references_cache.jsonl
 data/SQ1/raw/
+
+# Deprecated pre-pivot candidate pool (the active pool is candidates_with_terms.csv)
+data/SQ1/candidates_master.csv
 
 # Build artefact (canonical copy lives in OneDrive Report/)
 *.docx

@@ -100,7 +100,7 @@ SENTINEL_METADATA = {
         "note": "Book-restatement van Kardiners 1941 'Traumatic Neuroses of War'.",
     },
     "W4250282992": {
-        "sentinel_id": "grinker_1944_tunisia", "first_author": "Roy R. Grinker",
+        "sentinel_id": "war_neuroses_tunisian_1944", "first_author": "Roy R. Grinker",
         "co_authors": [],
         "cohort": "Allied WWII neuropsychiatric casualties, Tunisian campaign (n=120)",
         "journal": "Journal of the American Medical Association",

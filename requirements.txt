@@ -1,0 +1,18 @@
+# Reproducibility environment for the light (CPU) ELAS u4 pipeline (SQ1 + SQ2).
+# Heavy (ELAS h3) re-runs need a GPU; see code/SQ1_heavy/KAGGLE_README.md.
+#
+#   python -m venv .venv && . .venv/bin/activate   # (Windows: .venv\Scripts\activate)
+#   pip install -r requirements.txt
+
+asreview>=3.0            # ELAS u4 / h3 configs via get_ai_config(...)
+asreview-insights>=1.6.1 # normalized-loss metric cross-check (asreview metrics CLI)
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+openpyxl>=3.1           # read the FORAS .xlsx
+pyarrow>=14.0          # read/write the regex-rewritten parquet (SQ2)
+requests>=2.31         # OpenAlex candidate-pool query (build_candidate_pool.py)
+
+# Heavy (GPU) re-runs only, run on Kaggle (see code/SQ{1,2}_heavy/KAGGLE_README.md):
+# torch>=2.0
+# sentence-transformers   # mxbai-embed-large embeddings for the ELAS h3 feature extractor

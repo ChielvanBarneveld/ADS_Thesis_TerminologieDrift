@@ -1,0 +1,19 @@
+{
+  "condition": "baseline",
+  "seed": 48,
+  "engine": "asreview_3.0_elas_h3_svm_mxbai_balanced_max_nq1_cached",
+  "n_docs": 10594,
+  "n_positives": 131,
+  "n_sentinels": 0,
+  "prior_pos": 3019,
+  "prior_neg": 4079,
+  "wss_80": 0.7643,
+  "wss_90": 0.8154,
+  "wss_95": 0.8374,
+  "steps_to_80": 378,
+  "steps_to_95": 1193,
+  "loss": 0.021673611045246316,
+  "atd": 292.7709923664122,
+  "sentinel_positions": [],
+  "elapsed_seconds": 583.3
+}

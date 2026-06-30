@@ -4,9 +4,10 @@ All experiment code. One subfolder per sub-question.
 
 | Subfolder | SQ  | What                                                        |
 | --------- | --- | ----------------------------------------------------------- |
-| `SQ1/`    | SQ1 | Sentinel injection into FORAS + ELAS u4 simulations         |
-| `SQ2/`    | SQ2 | Regex drift sweep over (pp × nn) intensity grid             |
-| `SQ3/`    | SQ3 | GNN on the FORAS citation network (scaffold)                |
+| `SQ1/`       | SQ1 | Sentinel injection into FORAS + ELAS u4 simulations              |
+| `SQ1_heavy/` | SQ1 | SQ1 re-run with the ELAS h3 (mxbai) model + u4-vs-h3 comparison  |
+| `SQ2/`       | SQ2 | Regex drift sweep over the (pp × nn) intensity grid              |
+| `SQ2_heavy/` | SQ2 | SQ2 drift grid re-run with the ELAS h3 (mxbai) model            |
 
 Each subfolder has its own `README.md` documenting inputs, outputs and the order in which to run the scripts.
 

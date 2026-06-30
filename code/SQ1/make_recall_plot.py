@@ -1,20 +1,16 @@
-"""Generate mean recall plots per condition for SQ1.
+"""Generate mean recall plot per condition for SQ1.
 
-Reads recall_curve.csv from each run directory, interpolates to a common
-x-axis (proportion of corpus reviewed), computes mean +/- 95% CI per
-condition, and produces two figures:
+Replicates the asreview-insights plot_recall style (step plot, optimal
+recall line, black random baseline) with mean +/- 95% CI across seeds
+and X-markers at elusive-paper discovery positions.
 
-  outputs/SQ1/figures/recall_curves_full.png     (full 0-100% view)
-  outputs/SQ1/figures/recall_curves_zoomed.png   (zoomed to first 15%)
-
-Styling follows the ASReview recall-plot conventions used in
-asreview-insights (x = proportion reviewed, y = recall, diagonal =
-random baseline). Uses asreview's plot_recall internally for
-single-condition reference if available; falls back to matplotlib.
+If asreviewcontrib.insights is installed, delegates axis styling to the
+library. Otherwise uses a faithful replica based on the asreview-insights
+v1.6 source (plot.py::_add_recall_info).
 
 Reads:  Report/outputs/SQ1/simulations/runs/seed_*__<cond>/recall_curve.csv
-Writes: Report/outputs/SQ1/figures/recall_curves_full.png
-        Report/outputs/SQ1/figures/recall_curves_zoomed.png
+        Report/outputs/SQ1/simulations/summary.json
+Writes: Report/outputs/SQ1/figures/recall_curves.png
 
 Usage:  python make_recall_plot.py
 """
@@ -27,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# ---------- paths (relative to code/SQ1/this.py -> Report/) ----------
+# ---------- paths (code/SQ1/this.py -> code/ -> Report/) ----------
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPORT_DIR = SCRIPT_DIR.parent.parent
 RUNS_DIR = REPORT_DIR / "outputs" / "SQ1" / "simulations" / "runs"
@@ -35,8 +31,7 @@ SUMMARY = REPORT_DIR / "outputs" / "SQ1" / "simulations" / "summary.json"
 FIG_DIR = REPORT_DIR / "outputs" / "SQ1" / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-# ---------- ASReview-style configuration ----------
-# Condition order + colors matching ASReview's palette
+# ---------- condition config ----------
 CONDITIONS = ["baseline", "raw", "period", "full"]
 COND_LABELS = {
     "baseline": "Baseline (no injection)",
@@ -61,30 +56,37 @@ COND_LINESTYLES = {
     "full": (0, (5, 1.5)),         # long dash
 }
 
-# Common x-axis: 1000 evenly spaced points from 0 to 1
+SENTINEL_LABELS = {
+    "solomon_1988": "Solomon 1988",
+    "kardiner_1947": "Kardiner 1947",
+    "war_neuroses_tunisian_1944": "Grinker & Spiegel 1944",
+}
+SENTINEL_MARKERS = {
+    "solomon_1988": "X",
+    "kardiner_1947": "X",
+    "war_neuroses_tunisian_1944": "X",
+}
+
 X_INTERP = np.linspace(0, 1, 1001)
 
 
-def load_recall_curves() -> dict[str, list[np.ndarray]]:
-    """Load all recall curves, grouped by condition.
+def load_recall_curves() -> tuple[dict[str, list[np.ndarray]], int, int]:
+    """Load recall curves grouped by condition.
 
-    Returns {condition: [array of recall values interpolated to X_INTERP]}.
-    After the last step in a recall_curve.csv, recall = 1.0 for the
-    remainder of the corpus (AsReview truncates at last positive found).
+    Returns (curves, n_docs_baseline, n_pos_baseline).
     """
     curves: dict[str, list[np.ndarray]] = {c: [] for c in CONDITIONS}
 
-    # Get n_docs per condition from summary.json
     summary = json.loads(SUMMARY.read_text())
     n_docs_map: dict[str, int] = {}
+    n_pos_map: dict[str, int] = {}
     for run in summary["runs"]:
         n_docs_map[run["condition"]] = run["n_docs"]
+        n_pos_map[run["condition"]] = run["n_positives"]
 
     for run_dir in sorted(RUNS_DIR.iterdir()):
         if not run_dir.is_dir() or not run_dir.name.startswith("seed_"):
             continue
-
-        # Parse condition from dirname: seed_042__baseline -> baseline
         parts = run_dir.name.split("__", 1)
         if len(parts) != 2:
             continue
@@ -94,98 +96,130 @@ def load_recall_curves() -> dict[str, list[np.ndarray]]:
 
         rc_path = run_dir / "recall_curve.csv"
         if not rc_path.exists():
-            print(f"  WARN: {rc_path} not found, skipping")
+            print(f"  WARN: {rc_path} missing, skipping")
             continue
 
         df = pd.read_csv(rc_path)
-        n_docs = n_docs_map.get(cond, df["step"].max())
+        n_docs = n_docs_map.get(cond, int(df["step"].max()))
+        x_raw = np.concatenate([[0], df["step"].values / n_docs, [1.0]])
+        y_raw = np.concatenate([[0], df["recall"].values, [1.0]])
+        curves[cond].append(np.interp(X_INTERP, x_raw, y_raw))
 
-        # x = proportion of corpus reviewed (0..1)
-        # y = recall (0..1)
-        x_raw = df["step"].values / n_docs
-        y_raw = df["recall"].values
+    for c, arrs in curves.items():
+        print(f"  {c}: {len(arrs)} curves")
 
-        # Prepend (0, 0) and append (1, 1) for full interpolation range
-        x_raw = np.concatenate([[0], x_raw, [1.0]])
-        y_raw = np.concatenate([[0], y_raw, [1.0]])
-
-        # Interpolate to common grid
-        y_interp = np.interp(X_INTERP, x_raw, y_raw)
-        curves[cond].append(y_interp)
-
-    for cond, arrs in curves.items():
-        print(f"  {cond}: {len(arrs)} recall curves loaded")
-
-    return curves
+    return curves, n_docs_map["baseline"], n_pos_map["baseline"]
 
 
-def plot_recall_comparison(
-    curves: dict[str, list[np.ndarray]],
-    xlim: tuple[float, float] = (0, 1),
-    ylim: tuple[float, float] = (0, 1.02),
-    out_path: Path | None = None,
-    title: str = "",
-    zoom_label: str | None = None,
-):
-    """Plot mean recall +/- 95% CI per condition, ASReview style."""
+def load_sentinel_positions() -> dict[str, dict[str, tuple[float, float]]]:
+    """Load mean sentinel discovery positions per condition.
 
-    fig, ax = plt.subplots(figsize=(7, 5))
+    Returns {condition: {sentinel_id: (mean_x_proportion, mean_recall)}}.
+    """
+    summary = json.loads(SUMMARY.read_text())
+    # Collect per (cond, sentinel_id)
+    positions: dict[tuple[str, str], list[tuple[float, float]]] = {}
+    for run in summary["runs"]:
+        cond = run["condition"]
+        n_docs = run["n_docs"]
+        for sp in run.get("sentinel_positions", []) or []:
+            key = (cond, sp["sentinel_id"])
+            x = sp["step"] / n_docs
+            y = sp["recall_at_step"]
+            positions.setdefault(key, []).append((x, y))
 
-    # Random baseline (diagonal)
-    ax.plot([0, 1], [0, 1], "--", color="grey", linewidth=0.8, label="Random", zorder=1)
+    result: dict[str, dict[str, tuple[float, float]]] = {}
+    for (cond, sid), vals in positions.items():
+        xs, ys = zip(*vals)
+        result.setdefault(cond, {})[sid] = (float(np.mean(xs)), float(np.mean(ys)))
 
-    for cond in CONDITIONS:
-        arrs = curves.get(cond, [])
-        if not arrs:
-            continue
-        mat = np.array(arrs)  # shape (n_seeds, 1001)
-        mean = mat.mean(axis=0)
-        std = mat.std(axis=0)
-        n = mat.shape[0]
-        ci95 = 1.96 * std / np.sqrt(n)  # 95% confidence interval of the mean
+    return result
 
-        color = COND_COLORS[cond]
-        label = COND_LABELS[cond]
 
-        ax.plot(X_INTERP, mean, color=color, linewidth=1.6,
-                linestyle=COND_LINESTYLES[cond], label=label, zorder=3)
-        ax.fill_between(
-            X_INTERP, mean - ci95, mean + ci95,
-            color=color, alpha=0.15, zorder=2,
-        )
+def _apply_asreview_style(ax, n_pos):
+    """Apply asreview-insights recall-plot axis styling.
 
-    # ASReview-style formatting
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    ax.set_xlabel("Proportion of corpus reviewed", fontsize=11)
-    ax.set_ylabel("Recall (proportion of relevant papers found)", fontsize=11)
-    if title:
-        ax.set_title(title, fontsize=12)
-    ax.legend(loc="lower right", fontsize=9, framealpha=0.9)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(True, alpha=0.3, linewidth=0.5)
+    Tries to import asreviewcontrib.insights; if unavailable, replicates
+    the _add_recall_info style from asreview-insights v1.6.
+    """
+    try:
+        from asreviewcontrib.insights.plot import _add_recall_info
+        # _add_recall_info expects a labels list; we fake it for styling only
+        fake_labels = [1] * n_pos + [0] * (10000 - n_pos)
+        _add_recall_info(ax, fake_labels, x_absolute=False, y_absolute=False)
+        return
+    except Exception:
+        pass
 
-    # Add percentage tick labels for readability
-    from matplotlib.ticker import PercentFormatter
-    ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
-    ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
-
-    if zoom_label:
-        ax.annotate(
-            zoom_label, xy=(0.02, 0.97), xycoords="axes fraction",
-            fontsize=9, color="grey", va="top",
-        )
-
-    plt.tight_layout()
-    if out_path:
-        fig.savefig(out_path, dpi=200, bbox_inches="tight")
-        print(f"wrote {out_path.relative_to(REPORT_DIR)}")
-    plt.close(fig)
+    # Faithful replica of asreview-insights v1.6 _add_recall_info
+    ax.set_title("Recall")
+    ax.set(
+        xlabel="Proportion of labeled records",
+        ylabel="Recall",
+    )
+    ax.set_ylim([-0.05, 1.05])
+    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
 
 def main():
     print("Loading recall curves...")
-    curves = load_recall_curves()
+    curves, n_docs, n_pos = load_recall_curves()
+    sent_pos = load_sentinel_positions()
 
-    #
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+    # --- Random baseline (black step — asreview-insights convention) ---
+    ax.step(X_INTERP, X_INTERP, color="black", linewidth=0.8,
+            label="Random", where="post", zorder=1)
+
+    # --- Optimal recall (grey step — reaches 1.0 at n_pos/n_docs) ---
+    optimal_x = np.concatenate([[0], np.linspace(0, n_pos / n_docs, n_pos + 1), [1.0]])
+    optimal_y = np.concatenate([[0], np.linspace(0, 1, n_pos + 1), [1.0]])
+    ax.step(optimal_x, optimal_y, color="grey", linewidth=0.8,
+            label="Optimal", where="post", zorder=1)
+
+    # --- Mean recall curves with CI bands ---
+    for cond in CONDITIONS:
+        arrs = curves.get(cond, [])
+        if not arrs:
+            continue
+        mat = np.array(arrs)
+        mean = mat.mean(axis=0)
+        std = mat.std(axis=0)
+        ci95 = 1.96 * std / np.sqrt(mat.shape[0])
+
+        color = COND_COLORS[cond]
+        ax.step(X_INTERP, mean, color=color, linewidth=1.6,
+                linestyle=COND_LINESTYLES[cond],
+                label=COND_LABELS[cond], where="post", zorder=3)
+        ax.fill_between(X_INTERP, mean - ci95, mean + ci95,
+                        color=color, alpha=0.12, step="post", zorder=2)
+
+    # --- X-markers at elusive-paper discovery positions ---
+    marker_legend_added = set()
+    for cond in ["raw", "period", "full"]:
+        if cond not in sent_pos:
+            continue
+        color = COND_COLORS[cond]
+        for sid, (sx, sy) in sent_pos[cond].items():
+            label = SENTINEL_LABELS.get(sid, sid) if sid not in marker_legend_added else None
+            ax.scatter(sx, sy, marker="X", s=80, color=color,
+                       edgecolors="black", linewidths=0.5, zorder=5,
+                       label=label)
+            marker_legend_added.add(sid)
+
+    # --- Axis styling (asreview-insights convention) ---
+    _apply_asreview_style(ax, n_pos)
+
+    # Override: our legend includes conditions + sentinels
+    ax.legend(loc="lower right", fontsize=8, framealpha=0.9, ncol=2)
+
+    plt.tight_layout()
+    out = FIG_DIR / "recall_curves.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out.relative_to(REPORT_DIR)}")
+    plt.close(fig)
+
+
+if __name__ == "__main__":
+    main()
